@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard with Facebook-like Posts</title>
+    <style>
+        /* Your existing CSS styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .dashboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .dashboard-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .dashboard-heading h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .auth-buttons button {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .auth-buttons button:hover {
+            background: #0056b3;
+        }
+        .post {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            padding: 1rem;
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .profile-picture {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 1rem;
+            display: flex; /* Centering the image */
+            align-items: center; /* Center the image vertically */
+            justify-content: center; /* Center the image horizontally */
+        }
+        .profile-picture img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensures the image covers the container without stretching */
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-info h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .profile-info p {
+            margin: 0;
+            color: #666;
+        }
+        .post-content {
+            margin-bottom: 1rem;
+        }
+        .post-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+        .post-actions button {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .post-actions button:hover {
+            background: #0056b3;
+        }
+        .post-metadata {
+            font-size: 12px;
+            color: #999;
+        }
+        .post-metadata span {
+            margin-right: 1rem;
+        }
+        .new-post-form {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .new-post-form input, .new-post-form textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+        .new-post-form button {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.75rem;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .new-post-form button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <div class="dashboard-heading">
+            <h1>Dashboard Overview</h1>
+            <div class="auth-buttons">
+               <a href="./pages/uploadcard/uploadcard.html"> <button>User Information</button> </a>
+               <a href="./pages/signup/signup.html">  <button>Signup</button> </a>
+               <a href="./pages/login/login.html"> <button>Login</button> </a>
+                <button>Logout</button>
+            </div>
+        </div>
+
+        <!-- Form to add new post -->
+        <div class="new-post-form">
+            <h2>Add a New Post</h2>
+            <form id="new-post-form">
+                <input type="text" id="profile-name" placeholder="Profile Name" required>
+                <input type="file" id="profile-picture" required>
+                <textarea id="post-content" placeholder="Post Content" rows="4" required></textarea>
+                <button type="submit">Add Post</button>
+            </form>
+        </div>
+
+        <div id="posts-container">
+            <!-- Posts will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-storage.js"></script>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCl7Y9gWDII9QUOY73UdndyCK1lTuJE6gQ",
+            authDomain: "hackaton-bb671.firebaseapp.com",
+            projectId: "hackaton-bb671",
+            storageBucket: "hackaton-bb671.appspot.com",
+            messagingSenderId: "286754102966",
+            appId: "1:286754102966:web:72ef85c07ff4e024fe1017",
+            measurementId: "G-9L0599MDV2"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('new-post-form');
+            const postsContainer = document.getElementById('posts-container');
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const profileName = document.getElementById('profile-name').value;
+                const profilePictureFile = document.getElementById('profile-picture').files[0];
+                const postContent = document.getElementById('post-content').value;
+
+                if (profilePictureFile) {
+                    // Create a storage reference
+                    const storageRef = ref(storage, 'profile-pictures/' + profilePictureFile.name);
+
+                    // Upload the file
+                    const uploadTask = uploadBytesResumable(storageRef, profilePictureFile);
+
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            // Observe state change events such as progress, pause, and resume
+                        }, 
+                        (error) => {
+                            // Handle unsuccessful uploads
+                            alert('Error uploading image: ' + error.message);
+                        }, 
+                        () => {
+                            // Handle successful uploads on complete
+                            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                                // Save the post data to Firestore
+                                addDoc(collection(db, 'posts'), {
+                                    profileName: profileName,
+                                    profilePictureUrl: downloadURL,
+                                    postContent: postContent,
+                                    timestamp: serverTimestamp() // Add timestamp
+                                }).then(() => {
+                                    alert('Post added successfully!');
+
+                                    // Create a new post element
+                                    const postDiv = document.createElement('div');
+                                    postDiv.classList.add('post');
+
+                                    // Create post header
+                                    const postHeaderDiv = document.createElement('div');
+                                    postHeaderDiv.classList.add('post-header');
+
+                                    const profilePictureDiv = document.createElement('div');
+                                    profilePictureDiv.classList.add('profile-picture');
+                                    const profileImage = document.createElement('img');
+                                    profileImage.src = downloadURL;
+                                    profileImage.alt = 'Profile Picture';
+                                    profilePictureDiv.appendChild(profileImage);
+
+                                    const profileInfoDiv = document.createElement('div');
+                                    profileInfoDiv.classList.add('profile-info');
+                                    const profileNameH3 = document.createElement('h3');
+                                    profileNameH3.textContent = profileName;
+                                    const postTimeP = document.createElement('p');
+                                    postTimeP.textContent = 'Just now'; // You can dynamically set the time if needed
+                                    profileInfoDiv.appendChild(profileNameH3);
+                                    profileInfoDiv.appendChild(postTimeP);
+
+                                    postHeaderDiv.appendChild(profilePictureDiv);
+                                    postHeaderDiv.appendChild(profileInfoDiv);
+
+                                    // Create post content
+                                    const postContentDiv = document.createElement('div');
+                                    postContentDiv.classList.add('post-content');
+                                    const postContentP = document.createElement('p');
+                                    postContentP.textContent = postContent;
+                                    postContentDiv.appendChild(postContentP);
+
+                                    postDiv.appendChild(postHeaderDiv);
+                                    postDiv.appendChild(postContentDiv);
+
+                                    // Add the new post to the posts container
+                                    postsContainer.appendChild(postDiv);
+
+                                    // Clear the form fields
+                                    form.reset();
+                                }).catch((error) => {
+                                    alert('Error adding post: ' + error.message);
+                                });
+                            });
+                        }
+                    );
+                } else {
+                    alert('Please select a profile picture.');
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
